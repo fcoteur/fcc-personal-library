@@ -3,12 +3,20 @@
 var express     = require('express');
 var bodyParser  = require('body-parser');
 var cors        = require('cors');
+const helmet    = require('helmet');
+
 
 var apiRoutes         = require('./routes/api.js');
 var fccTestingRoutes  = require('./routes/fcctesting.js');
 var runner            = require('./test-runner');
 
 var app = express();
+
+// Nothing from my website will be cached in my client as a security measure
+//I will see that the site is powered by 'PHP 4.2.0' even though it isn't as a security measure
+app.use(helmet());
+app.use(helmet.noCache());
+app.use(helmet.hidePoweredBy({ setTo: 'PHP 4.2.0' }));
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -17,17 +25,19 @@ app.use(cors({origin: '*'})); //USED FOR FCC TESTING PURPOSES ONLY!
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-//Index page (static HTML)
-app.route('/')
-  .get(function (req, res) {
-    res.sendFile(process.cwd() + '/views/index.html');
-  });
+var mongoose = require('mongoose');
+var mongoDB = process.env.MONGO_DB;
+mongoose.connect(mongoDB);
+mongoose.Promise = global.Promise;
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 //For FCC testing purposes
 fccTestingRoutes(app);
 
 //Routing for API 
-apiRoutes(app);  
+var apiRoutes = require('./routes/api');
+app.use('/', apiRoutes);
     
 //404 Not Found Middleware
 app.use(function(req, res, next) {
