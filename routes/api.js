@@ -19,8 +19,6 @@ router.get('/', function (req, res) {
 });
 
 router.get('/api/books', function (req, res){
-  //response will be array of book objects
-  //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
   Book.find({}, (err,docs) =>{
     if (err) {
       console.log(err);
@@ -32,7 +30,7 @@ router.get('/api/books', function (req, res){
         books.push({
           title: doc.title,
           _id: doc._id,
-          commentCount: cCount
+          commentcount: cCount
         });
       });
       res.send(books);
@@ -41,38 +39,74 @@ router.get('/api/books', function (req, res){
 })
 
 router.post('/api/books', function (req, res){
-  var title = req.body.title;
-  let book = new Book ({title: title});
-  book.save((err,doc)=>{
-    if (err) {
-      console.log(err);
-      res.end();
-    } else {
-      res.send(doc);
-    }
-    
-  });
-  //response will contain new book object including atleast _id and title
+  if (req.body.title) {
+    var title = req.body.title;
+    let book = new Book ({title: title});
+    book.save((err,doc)=>{
+      if (err) {
+        console.log(err);
+        return 'the book has not been saved';
+      } else {
+        res.send(doc);
+      }
+    });
+  } else {
+    res.end();
+    return 'no title is provided';
+  }
 })
 
 router.delete('/api/books', function(req, res){
-  //if successful response will be 'complete delete successful'
+  Book.deleteMany({},(err,doc) => {
+    if (err) {
+      console.log(err);
+      return 'no book were deleted';
+    } else {
+      return 'complete delete successful';
+    }; 
+  });
+  
+  
 });
 
 router.get('/api/books/:id', function (req, res){
   var bookid = req.params.id;
-  //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
+  Book.findById({_id: bookid},'_id title comments',(err,doc) => {
+    if (err) {
+      console.log(err);
+      return 'no book exists';
+    } else {
+      res.json(doc)
+    }
+  });
 })
 
 router.post('/api/books/:id', function(req, res){
   var bookid = req.params.id;
   var comment = req.body.comment;
-  //json res format same as .get
+  Book.findById({_id: bookid},'_id title comments',(err,doc) => {
+    if (err) {
+      res.send('the book with ' + bookid + ' was not found');
+    } else {
+      doc.comments.push(comment);
+      doc.save((err,doc)=>{
+        if (err) console.log(err)
+        res.json(doc) 
+      });
+    }
+  });
 })
 
 router.delete('/api/books/:id', function(req, res){
   var bookid = req.params.id;
-  //if successful response will be 'delete successful'
+  Book.findByIdAndDelete({_id: bookid},(err,doc) => {
+    if (err) {
+      console.log(err);
+      res.send('the book was not deleted');
+    } else {
+      res.send('delete successful')
+    }; 
+  });
 }); 
 
 module.exports = router;
